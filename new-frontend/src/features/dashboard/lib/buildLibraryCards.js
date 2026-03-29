@@ -1,0 +1,61 @@
+import { apiConfig } from '../../../services/apiConfig.js';
+import { fallbackVideoCards } from '../constants/fallbackVideoCards.js';
+
+/**
+ * Transform backend video list into UI card format
+ * @param {Array} videos - Array of video objects from backend
+ * @param {string|null} trackedVideoFilename - Currently generating video filename
+ * @returns {Array} Array of video card objects for UI
+ */
+export function buildLibraryCards(videos, trackedVideoFilename) {
+    if (!videos || videos.length === 0) {
+        return fallbackVideoCards;
+    }
+
+    const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    ];
+
+    return videos.map((video) => {
+        const isTracked = trackedVideoFilename && video.name === trackedVideoFilename;
+        const videoUrl = `${apiConfig.baseUrl}${video.path}`;
+
+        // Use real thumbnail if available, otherwise gradient
+        const thumbnailUrl = video.thumbnail
+            ? `${apiConfig.baseUrl}${video.thumbnail}`
+            : null;
+
+        // Extract readable title from filename
+        const nameWithoutExt = video.name.replace(/\.(mp4|webm|ogg|mov|avi)$/i, '');
+        const parts = nameWithoutExt.split('_');
+        const timestamp = parts[parts.length - 1];
+        const topicParts = parts.slice(0, -1);
+        const title = topicParts
+            .join(' ')
+            .replace(/_/g, ' ')
+            .replace(/\bet\b/gi, 'ET')
+            || 'Generated Video';
+
+        // Fallback gradient based on filename hash
+        const gradientIndex =
+            Math.abs(
+                timestamp.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+            ) % gradients.length;
+
+        const imageUrl = thumbnailUrl || gradients[gradientIndex];
+
+        return {
+            id: video.name,
+            title,
+            meta: isTracked ? 'Just Created • HD 1080p' : 'Generated • HD 1080p',
+            durationLabel: '00:45',
+            href: videoUrl,
+            imageUrl,
+            isTracked,
+        };
+    });
+}
